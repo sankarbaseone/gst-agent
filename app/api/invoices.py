@@ -70,10 +70,18 @@ async def upload_invoices(
 
         logger.info(f"Reconciliation COMPLETED for tenant: {x_tenant_id}. Count: {len(parsed_invoices)}")
 
+        vendor_summary_results = []
+        if x_plan in ["PRO", "ENTERPRISE"]:
+            from app.core.vendor_aggregation import aggregate_vendor_risk
+            vendor_summary = aggregate_vendor_risk(parsed_invoices, results)
+            vendor_summary_results = [v.dict() for v in vendor_summary]
+            APP_STATE[x_tenant_id]["vendor_summary"] = vendor_summary_results
+
         return {
             "status": "success",
             "total_invoices": len(parsed_invoices),
-            "reconciliation_results": results
+            "reconciliation_results": results,
+            "vendor_summary": vendor_summary_results
         }
 
     except Exception as e:

@@ -53,6 +53,32 @@
         </div>
     </div>
 
+    <!-- Vendor Risk Summary Section -->
+    <div class="card" id="vendor-risk-section" style="display: none; margin-bottom: 2rem;">
+        <div
+            style="background-color: #F8FAFC; border-left: 4px solid #8B5CF6; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+            <p style="margin: 0; font-weight: 500; color: #1E293B;">
+                💡 Vendor risk is derived from invoice-level reconciliation results.
+            </p>
+        </div>
+
+        <h3>Vendor-wise GST Risk Summary</h3>
+        <table id="vendor-table">
+            <thead>
+                <tr>
+                    <th>Vendor GSTIN</th>
+                    <th>Total Invoices</th>
+                    <th>Missing in 2B</th>
+                    <th>Risky ITC</th>
+                    <th>Risk Level</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
     <div class="card" style="overflow-x: auto;">
         <!-- Trust Message -->
         <div

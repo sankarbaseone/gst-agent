@@ -86,6 +86,36 @@ async def get_gst_risk_report(
     ]))
     elements.append(Paragraph("Detailed Invoices (Top 100)", styles['Heading2']))
     elements.append(table)
+    elements.append(Spacer(1, 24))
+    
+    # Vendor-wise GST Risk Summary
+    vendor_summary_data = data.get("vendor_summary", [])
+    if vendor_summary_data:
+        elements.append(Paragraph("Vendor-wise GST Risk Summary", styles['Heading2']))
+        elements.append(Spacer(1, 12))
+        
+        vendor_table_data = [["Vendor GSTIN", "Total Invoices", "Missing", "Risky", "Risk Level"]]
+        for vendor in vendor_summary_data[:50]:
+            vendor_table_data.append([
+                vendor["vendor_gstin"],
+                str(vendor["total_invoices"]),
+                str(vendor["missing_in_2b_count"]),
+                str(vendor["risky_count"]),
+                vendor["vendor_risk_level"]
+            ])
+        
+        vendor_table = Table(vendor_table_data, repeatRows=1, colWidths=[120, 80, 60, 60, 80])
+        vendor_table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.whitesmoke),
+        ]))
+        elements.append(vendor_table)
+        elements.append(Spacer(1, 12))
+        
+        tooltip_text = "Vendor risk is derived from invoice-level reconciliation results."
+        elements.append(Paragraph(tooltip_text, ParagraphStyle(name='Tooltip', fontSize=8, textColor=colors.grey, italic=True)))
+        elements.append(Spacer(1, 24))
     
     # Mandatory Footer
     elements.append(Spacer(1, 48))

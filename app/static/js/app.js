@@ -81,8 +81,32 @@ function renderResults(data) {
         tbody.appendChild(tr);
     });
 
+
     // Update usage display
     document.getElementById('limit-usage').textContent = data.total_invoices;
+
+    // Render Vendor Summary
+    const vendorSummary = data.vendor_summary || [];
+    if (vendorSummary.length > 0) {
+        const vendorSection = document.getElementById('vendor-risk-section');
+        vendorSection.style.display = 'block';
+
+        const vendorTbody = document.querySelector('#vendor-table tbody');
+        vendorTbody.innerHTML = '';
+
+        vendorSummary.forEach(v => {
+            const tr = document.createElement('tr');
+            const riskClass = v.vendor_risk_level === 'HIGH' ? 'RISKY_ITC' : (v.vendor_risk_level === 'MEDIUM' ? 'PARTIAL_MATCH' : 'MATCHED');
+            tr.innerHTML = `
+                <td>${v.vendor_gstin}</td>
+                <td>${v.total_invoices}</td>
+                <td>${v.missing_in_2b_count}</td>
+                <td>${v.risky_count}</td>
+                <td><span class="badge badge-${riskClass}">${v.vendor_risk_level}</span></td>
+            `;
+            vendorTbody.appendChild(tr);
+        });
+    }
 }
 
 async function downloadPDF() {
