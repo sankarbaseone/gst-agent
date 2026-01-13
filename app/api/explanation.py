@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Header
 from app.schemas.explanation import ExplainRequest, ExplainResponse
 from app.core.ai import generate_explanation
 
 router = APIRouter()
 
 @router.post("/explain-mismatch", response_model=ExplainResponse)
-async def explain_mismatch(request: ExplainRequest = Body(...)):
+async def explain_mismatch(
+    request: ExplainRequest = Body(...),
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID")
+):
     """
     Generate an AI-powered explanation for a reconciliation mismatch.
     This is a read-only operation and does not alter the invoice status.

@@ -15,6 +15,7 @@ class AuditLogEntry(BaseModel):
     method: str
     action_type: str
     actor: str = "system"
+    tenant_id: str
     input_hash: Optional[str] = None
     output_hash: Optional[str] = None
     status: AuditStatus

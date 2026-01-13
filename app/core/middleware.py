@@ -1,6 +1,6 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, StreamingResponse
+from starlette.responses import Response, JSONResponse
 from starlette.concurrency import iterate_in_threadpool
 import hashlib
 import json
@@ -17,7 +17,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
         endpoint = request.url.path
         method = request.method
         
-        # Determine Action Type (Simple heuristic based on path)
+        # Determine Action Type
         action_type = "UNKNOWN"
         if "upload" in endpoint:
             action_type = "UPLOAD"
@@ -28,25 +28,70 @@ class AuditMiddleware(BaseHTTPMiddleware):
         elif "health" in endpoint:
             action_type = "HEALTH_CHECK"
 
-        # 2. Capture & Hash Input
+        # 2. Strict Tenant ID Check
+        tenant_id = request.headers.get("X-Tenant-ID")
+        
+        # If missing, we must reject, unless it's a health check? 
+        # Requirement: "Middleware must reject any request missing X-Tenant-ID with HTTP 400"
+        # "No business logic should execute without tenant_id"
+        # We will allow health check to pass or require it there too?
+        # Usually health check is public. But the requirement is strict: "Middleware must reject ANY request"
+        # Let's apply it generally, assuming /health is an API endpoint. 
+        # Actually, verifying readiness usually implies system level. 
+        # But for compliance SaaS, maybe even health is protected? 
+        # Let's stick to the prompt: "Middleware must reject ANY request missing X-Tenant-ID"
+        # We will use "MISSING" for the log entry if we reject.
+
+        if not tenant_id:
+             # If strictly enforcing, we return 400 immediately.
+             # We still want to audit this failure.
+             tenant_id_for_log = "MISSING"
+             status = AuditStatus.FAILURE
+             
+             # We assume empty body hash for rejection if we don't read it
+             # But let's follow the standard flow: read body (to hash), then reject.
+             # Or just reject to save bandwidth. 
+             # Let's reject immediately. Input hash will be None or empty hash.
+             
+             # We need to construct the 400 response
+             response = JSONResponse(
+                 status_code=400, 
+                 content={"detail": "Missing tenant identifier"}
+             )
+             
+             # Log the rejection
+             try:
+                entry = AuditLogEntry(
+                    endpoint=endpoint,
+                    method=method,
+                    action_type=action_type,
+                    tenant_id=tenant_id_for_log,
+                    input_hash=None, # Did not read body
+                    output_hash=None, # Standard error response, maybe not worth hashing? Or hash the JSON?
+                    status=status
+                )
+                audit_repo.save(entry)
+             except Exception as e:
+                 logger.error(f"Audit Logging Failed: {e}")
+                 
+             return response
+
+        # 3. Capture & Hash Input
         input_hash = None
         request_body_bytes = b""
         try:
-            # We must consume the stream carefully to allow downstream to read it again
-            # Starlette/FastAPI request body is a stream. To read it here, we need to cache it.
-            # NOTE: For large files, this is memory intensive. In a real system, we might limit this.
             request_body_bytes = await request.body()
             # Always hash the body, even if empty, for determinism
             input_hash = hashlib.sha256(request_body_bytes).hexdigest()
         except Exception:
             pass # Fail silently
             
-        # Re-inject body for downstream
+        # Re-inject body
         async def receive():
             return {"type": "http.request", "body": request_body_bytes}
         request._receive = receive
 
-        # 3. Process Request
+        # 4. Process Request
         response = None
         status = AuditStatus.FAILURE
         output_hash = None
@@ -56,17 +101,15 @@ class AuditMiddleware(BaseHTTPMiddleware):
             if 200 <= response.status_code < 300:
                 status = AuditStatus.SUCCESS
             
-            # 4. Capture & Hash Output
-            # We need to peek at the response body. StreamingResponse makes this tricky.
-            # We iterate the body, hash it, and reconstruct the response.
+            # 5. Capture & Hash Output
             response_body_bytes = b""
             async for chunk in response.body_iterator:
                 response_body_bytes += chunk
             
-            # Always hash response, even if empty
+            # Always hash response
             output_hash = hashlib.sha256(response_body_bytes).hexdigest()
             
-            # Reconstruct response to be sent back
+            # Reconstruct response
             response = Response(
                 content=response_body_bytes,
                 status_code=response.status_code,
@@ -75,16 +118,16 @@ class AuditMiddleware(BaseHTTPMiddleware):
             )
             
         except Exception as e:
-            # If application raised unhandled exception
             status = AuditStatus.FAILURE
             raise e
         finally:
-            # 5. Log Event (Fail Silently)
+            # 6. Log Event
             try:
                 entry = AuditLogEntry(
                     endpoint=endpoint,
                     method=method,
                     action_type=action_type,
+                    tenant_id=tenant_id,
                     input_hash=input_hash,
                     output_hash=output_hash,
                     status=status
