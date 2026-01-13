@@ -5,6 +5,9 @@ from app.api import health
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
+from app.core.middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
+
 # Include routers
 app.include_router(health.router)
 
