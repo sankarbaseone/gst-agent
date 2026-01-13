@@ -8,12 +8,20 @@ app = FastAPI(title=settings.PROJECT_NAME)
 from app.core.middleware import AuditMiddleware
 app.add_middleware(AuditMiddleware)
 
+from fastapi.staticfiles import StaticFiles
+from app.api import web
+
+# Mount Static
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Include routers
+app.include_router(web.router)
 app.include_router(health.router)
 
-from app.api import invoices, explanation
+from app.api import invoices, explanation, reports
 app.include_router(invoices.router)
 app.include_router(explanation.router)
+app.include_router(reports.router)
 
 @app.on_event("startup")
 async def startup_event():

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2>Reconciliation Dashboard</h2>
+    <div>
+        <span class="badge" style="background:#E2E8F0; color:#475569; margin-right: 1rem;">Plan: {{ plan }}</span>
+        <button class="btn btn-secondary" onclick="logout()">End Session</button>
+    </div>
+</div>
+
+<!-- Upload Section -->
+<div class="card" style="margin-bottom: 2rem;">
+    <h3>Upload Invoices</h3>
+    <p style="font-size: 0.9rem; color: #64748B; margin-bottom: 1rem;">
+        Plan Limit: <span id="limit-usage">0</span> / {{ limit }} invoices
+    </p>
+
+    <div id="upload-area"
+        style="border: 2px dashed var(--border); padding: 3rem; text-align: center; border-radius: 4px;">
+        <input type="file" id="file-input" accept=".csv" style="display: none;">
+        <label for="file-input" class="btn btn-primary">Select CSV File</label>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">or drag and drop here</p>
+    </div>
+    <div id="upload-error" class="alert-error" style="display: none; margin-top: 1rem;"></div>
+</div>
+
+<!-- Processing State -->
+<div id="processing-state" style="display: none; text-align: center; padding: 4rem;">
+    <div style="font-size: 1.5rem; margin-bottom: 1rem;">⚙️</div>
+    <h3>Reconciling invoices against government data...</h3>
+    <p>Please wait, deterministic engine running.</p>
+</div>
+
+<!-- Results -->
+<div id="results-area" style="display: none;">
+    <div class="grid-4" style="margin-bottom: 2rem; margin-top: 0;">
+        <div class="card" style="padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: #166534;" id="count-matched">0</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">MATCHED</div>
+        </div>
+        <div class="card" style="padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: #854D0E;" id="count-partial">0</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">PARTIAL</div>
+        </div>
+        <div class="card" style="padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: #991B1B;" id="count-missing">0</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">MISSING</div>
+        </div>
+        <div class="card" style="padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2rem; font-weight: bold; color: #991B1B;" id="count-risky">0</div>
+            <div style="font-size: 0.85rem; font-weight: 600;">RISKY</div>
+        </div>
+    </div>
+
+    <div class="card" style="overflow-x: auto;">
+        <!-- Trust Message -->
+        <div
+            style="background-color: #F8FAFC; border-left: 4px solid #3B82F6; padding: 1rem; margin-bottom: 1.5rem; text-align: left;">
+            <p style="margin: 0; font-weight: 500; color: #1E293B;">
+                Upload complete. Reconciliation is in progress and results will appear here shortly.
+            </p>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3>Detailed Report</h3>
+            <div>
+                <button class="btn btn-primary" onclick="downloadPDF()">Download GST Risk Report (PDF)</button>
+                <button class="btn btn-secondary" onclick="alert('Demo limitation: CSV pending')">Download CSV</button>
+            </div>
+        </div>
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Invoice No</th>
+                    <th>GSTIN</th>
+                    <th>Status</th>
+                    <th>Explanation</th>
+                    <th>Suggested Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phase-1 Disclaimer -->
+    <div
+        style="margin-top: 2rem; padding: 1rem; color: #64748B; font-size: 0.85rem; text-align: center; border-top: 1px solid #E2E8F0;">
+        <strong>Phase-1 Notice:</strong>
+        This interface provides reconciliation insights only. It does not automatically file GST returns and does not
+        constitute tax advice.
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Server-injected context for JS to use in API calls
+    const CTX_TENANT_ID = "{{ tenant_id }}";
+    const CTX_PLAN = "{{ plan }}";
+</script>
+<script src="/static/js/app.js"></script>
+{% endblock %}

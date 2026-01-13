@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GST Trust | Compliance SaaS</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="logo">GST Trust</div>
+        <nav>
+            <a href="#">How it Works</a>
+            <a href="#">Sample Report</a>
+            <a href="#">Trust & Compliance</a>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>Deterministic Engine. Immutable Audit Logs. No Auto-filing.</p>
+        <p>This tool provides reconciliation insights only and does not constitute tax advice.</p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

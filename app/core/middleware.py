@@ -29,29 +29,20 @@ class AuditMiddleware(BaseHTTPMiddleware):
             action_type = "HEALTH_CHECK"
 
         # 2. Strict Tenant ID Check
-        tenant_id = request.headers.get("X-Tenant-ID")
+        # Check cookies first (for web UI), then fall back to headers (for API clients)
+        tenant_id = request.cookies.get("gst_tenant_id") or request.headers.get("X-Tenant-ID")
         
-        # If missing, we must reject, unless it's a health check? 
-        # Requirement: "Middleware must reject any request missing X-Tenant-ID with HTTP 400"
-        # "No business logic should execute without tenant_id"
-        # We will allow health check to pass or require it there too?
-        # Usually health check is public. But the requirement is strict: "Middleware must reject ANY request"
-        # Let's apply it generally, assuming /health is an API endpoint. 
-        # Actually, verifying readiness usually implies system level. 
-        # But for compliance SaaS, maybe even health is protected? 
-        # Let's stick to the prompt: "Middleware must reject ANY request missing X-Tenant-ID"
-        # We will use "MISSING" for the log entry if we reject.
+        # Exclude entry points and static assets from strict tenant check
+        public_prefixes = ["/onboarding", "/static", "/health"]
+        is_public = endpoint == "/" or any(endpoint.startswith(p) for p in public_prefixes)
+        
+        logger.debug(f"Request to {endpoint}, tenant_id={tenant_id}, is_public={is_public}")
 
-        if not tenant_id:
+        if not tenant_id and not is_public:
              # If strictly enforcing, we return 400 immediately.
              # We still want to audit this failure.
              tenant_id_for_log = "MISSING"
              status = AuditStatus.FAILURE
-             
-             # We assume empty body hash for rejection if we don't read it
-             # But let's follow the standard flow: read body (to hash), then reject.
-             # Or just reject to save bandwidth. 
-             # Let's reject immediately. Input hash will be None or empty hash.
              
              # We need to construct the 400 response
              response = JSONResponse(
@@ -66,8 +57,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
                     method=method,
                     action_type=action_type,
                     tenant_id=tenant_id_for_log,
-                    input_hash=None, # Did not read body
-                    output_hash=None, # Standard error response, maybe not worth hashing? Or hash the JSON?
+                    input_hash=None,
+                    output_hash=None,
                     status=status
                 )
                 audit_repo.save(entry)
@@ -75,6 +66,10 @@ class AuditMiddleware(BaseHTTPMiddleware):
                  logger.error(f"Audit Logging Failed: {e}")
                  
              return response
+        
+        # For public routes without tenant_id, use "PUBLIC" as tenant identifier for logging
+        if not tenant_id and is_public:
+            tenant_id = "PUBLIC"
 
         # 3. Capture & Hash Input
         input_hash = None

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero">
+    <h1>Know Your GST Risk Before You File</h1>
+    <p>Deterministic GST reconciliation against GSTR-2B with audit logs and AI explanations — not guesses.</p>
+    <a href="/onboarding/setup" class="btn btn-primary">Check My GST Now</a>
+    <a href="#" class="btn btn-secondary">See Sample Report</a>
+</div>
+
+<div class="steps">
+    <div class="step-card">
+        <h3>1. Upload</h3>
+        <p>Support for Tally & Zoho CSVs</p>
+    </div>
+    <div class="step-card">
+        <h3>2. Reconcile</h3>
+        <p>Exact & Fuzzy Matching vs GSTR-2B</p>
+    </div>
+    <div class="step-card">
+        <h3>3. Review</h3>
+        <p>Risk Report & AI Explanation</p>
+    </div>
+</div>
+
+<div class="grid-4">
+    <div class="card">
+        <h3>Invoice Matching</h3>
+        <p>Deterministic logic to catch every penny mismatch.</p>
+    </div>
+    <div class="card">
+        <h3>Risk Detection</h3>
+        <p>Auto-flag missing ITC and risky supplier claims.</p>
+    </div>
+    <div class="card">
+        <h3>AI Explanations</h3>
+        <p>Read-only analysis in plain English.</p>
+    </div>
+    <div class="card">
+        <h3>Audit Trail</h3>
+        <p>Immutable logs for every single action.</p>
+    </div>
+</div>
+
+<div class="grid-3" style="margin-top: 4rem;">
+    <div class="card" style="text-align: center;">
+        <h3>BASIC</h3>
+        <div style="font-size: 2rem; font-weight: bold; margin: 1rem 0;">₹999<span
+                style="font-size: 1rem; color: #64748B;">/mo</span></div>
+        <ul style="list-style: none; padding: 0; text-align: left; margin-bottom: 2rem;">
+            <li>✓ Up to 100 Invoices</li>
+            <li>✓ GST Reconciliation</li>
+            <li>✓ Risk Report</li>
+        </ul>
+    </div>
+    <div class="card" style="text-align: center; border-color: var(--navy);">
+        <h3>PRO</h3>
+        <div style="font-size: 2rem; font-weight: bold; margin: 1rem 0;">₹1,999<span
+                style="font-size: 1rem; color: #64748B;">/mo</span></div>
+        <ul style="list-style: none; padding: 0; text-align: left; margin-bottom: 2rem;">
+            <li>✓ Up to 500 Invoices</li>
+            <li>✓ Priority Support</li>
+            <li>✓ Vendor-wise View</li>
+        </ul>
+    </div>
+</div>
+
+<p style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: #64748B;">*We do not auto-file GST returns.
+</p>
+{% endblock %}

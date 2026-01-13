@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; text-align: center;">
+    <h2>Select Your Plan</h2>
+
+    <form action="/onboarding/plan" method="POST">
+        <div class="grid-3" style="justify-content: center;">
+            <label class="plan-card" onclick="selectPlan('BASIC')" id="plan-basic">
+                <input type="radio" name="plan" value="BASIC" checked style="display:none;">
+                <h3>BASIC</h3>
+                <p>Up to 100 Invoices</p>
+            </label>
+
+            <label class="plan-card" onclick="selectPlan('PRO')" id="plan-pro">
+                <input type="radio" name="plan" value="PRO" style="display:none;">
+                <h3>PRO</h3>
+                <p>Up to 500 Invoices</p>
+            </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top: 2rem;">Continue to App</button>
+    </form>
+</div>
+
+<script>
+    function selectPlan(plan) {
+        document.querySelectorAll('.plan-card').forEach(el => el.classList.remove('selected'));
+        document.getElementById('plan-' + plan.toLowerCase()).classList.add('selected');
+    }
+    // Init default
+    selectPlan('BASIC');
+</script>
+{% endblock %}
