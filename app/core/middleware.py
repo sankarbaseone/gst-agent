@@ -36,8 +36,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             # Starlette/FastAPI request body is a stream. To read it here, we need to cache it.
             # NOTE: For large files, this is memory intensive. In a real system, we might limit this.
             request_body_bytes = await request.body()
-            if request_body_bytes:
-                input_hash = hashlib.sha256(request_body_bytes).hexdigest()
+            # Always hash the body, even if empty, for determinism
+            input_hash = hashlib.sha256(request_body_bytes).hexdigest()
         except Exception:
             pass # Fail silently
             
@@ -63,8 +63,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             async for chunk in response.body_iterator:
                 response_body_bytes += chunk
             
-            if response_body_bytes:
-                output_hash = hashlib.sha256(response_body_bytes).hexdigest()
+            # Always hash response, even if empty
+            output_hash = hashlib.sha256(response_body_bytes).hexdigest()
             
             # Reconstruct response to be sent back
             response = Response(
@@ -85,7 +85,6 @@ class AuditMiddleware(BaseHTTPMiddleware):
                     endpoint=endpoint,
                     method=method,
                     action_type=action_type,
-                    request_hash=input_hash, # Schema used input_hash
                     input_hash=input_hash,
                     output_hash=output_hash,
                     status=status
