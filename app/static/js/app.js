@@ -18,30 +18,13 @@ async function handleUpload(e) {
     resultsArea.style.display = 'none';
     processingState.style.display = 'block';
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-        const response = await fetch('/invoices/upload', {
-            method: 'POST',
-            headers: {
-                'X-Tenant-ID': CTX_TENANT_ID,
-                'X-Plan': CTX_PLAN
-            },
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            // Requirement 4: User-safe reconciliation failure message
-            throw new Error('Reconciliation could not be completed. ' + (data.detail || 'Please try again.'));
-        }
-
+        // Use ApiService for upload
+        const data = await ApiService.uploadInvoices(file, CTX_TENANT_ID, CTX_PLAN);
         renderResults(data);
-
     } catch (err) {
-        errorDiv.textContent = err.message;
+        // Requirement 4: Propagation of errors
+        errorDiv.textContent = 'Reconciliation could not be completed. ' + err.message;
         errorDiv.style.display = 'block';
     } finally {
         processingState.style.display = 'none';
@@ -81,7 +64,6 @@ function renderResults(data) {
         tbody.appendChild(tr);
     });
 
-
     // Update usage display
     document.getElementById('limit-usage').textContent = data.total_invoices;
 
@@ -111,23 +93,17 @@ function renderResults(data) {
 
 async function downloadPDF() {
     try {
-        const response = await fetch('/reports/gst-risk', {
-            method: 'GET',
-            headers: {
-                'X-Tenant-ID': CTX_TENANT_ID
-            }
-        });
+        // Use ApiService for PDF download
+        const { blob, filename } = await ApiService.downloadRiskReportPDF(CTX_TENANT_ID);
 
-        if (!response.ok) throw new Error('Failed to generate report.');
-
-        const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `GST_Risk_Report_${CTX_TENANT_ID.slice(0, 8)}.pdf`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
+        a.remove();
     } catch (err) {
         alert(err.message);
     }
