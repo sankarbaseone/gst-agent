@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 from fastapi.responses import StreamingResponse
 from app.db.memory import APP_STATE
 from app.schemas.report import ReportResponse, BusinessInfo, ReconciliationSummary, VendorSummaryItem, InvoiceDetail, RiskAssessment, ReportAudit
@@ -10,7 +10,9 @@ import uuid
 import logging
 import io
 import hashlib
+import json
 from reportlab.lib.pagesizes import A4
+# ... (rest of imports remain same)
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
@@ -101,12 +103,38 @@ async def internal_get_report_data(x_tenant_id: str) -> ReportResponse:
     )
 
 @router.get("/reports/gst-risk", response_model=ReportResponse)
-async def get_gst_risk_report(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
+async def get_gst_risk_report(
+    request: Request,
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID")
+):
     logger.info(f"JSON Report requested for tenant: {x_tenant_id}")
-    return await internal_get_report_data(x_tenant_id)
+    report = await internal_get_report_data(x_tenant_id)
+    
+    # Explicit Audit Logging for JSON
+    report_json = report.model_dump_json() if hasattr(report, "model_dump_json") else json.dumps(report.dict())
+    output_hash = hashlib.sha256(report_json.encode()).hexdigest()
+    
+    audit_repo.save(AuditLogEntry(
+        endpoint="/reports/gst-risk",
+        method="GET",
+        action_type="REPORT",
+        tenant_id=x_tenant_id,
+        output_hash=output_hash,
+        status=AuditStatus.SUCCESS
+    ))
+    
+    # Return JSONResponse to include internal audit signal header
+    from fastapi.responses import JSONResponse as FastAPIJSONResponse
+    return FastAPIJSONResponse(
+        content=json.loads(report_json),
+        headers={"X-Audit-Captured": "true"}
+    )
 
 @router.get("/reports/gst-risk/pdf")
-async def get_gst_risk_pdf_report(x_tenant_id: str = Header(..., alias="X-Tenant-ID")):
+async def get_gst_risk_pdf_report(
+    request: Request,
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID")
+):
     logger.info(f"PDF Report Generation STARTED for tenant: {x_tenant_id}")
     
     try:
@@ -181,12 +209,16 @@ async def get_gst_risk_pdf_report(x_tenant_id: str = Header(..., alias="X-Tenant
         status=AuditStatus.SUCCESS
     ))
 
+    # Mark as audited to prevent middleware from double-logging
+    headers = {
+        "Content-Disposition": f"attachment; filename=GST_Trust_Report_{x_tenant_id[:8]}.pdf",
+        "Content-Length": str(len(pdf_bytes)),
+        "X-Audit-Captured": "true"
+    }
+
     buffer.seek(0)
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f"attachment; filename=GST_Trust_Report_{x_tenant_id[:8]}.pdf",
-            "Content-Length": str(len(pdf_bytes))
-        }
+        headers=headers
     )

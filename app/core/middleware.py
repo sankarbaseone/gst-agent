@@ -1,6 +1,6 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import Response, JSONResponse, StreamingResponse as StarletteStreamingResponse
 from starlette.concurrency import iterate_in_threadpool
 import hashlib
 import json
@@ -25,6 +25,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             action_type = "RECONCILE"
         elif "explain" in endpoint:
             action_type = "EXPLAIN"
+        elif "reports" in endpoint:
+            action_type = "REPORT"
         elif "health" in endpoint:
             action_type = "HEALTH_CHECK"
 
@@ -91,14 +93,36 @@ class AuditMiddleware(BaseHTTPMiddleware):
         response = None
         status = AuditStatus.FAILURE
         output_hash = None
+        audited_already = False
         
         try:
             response = await call_next(request)
+            
+            # 5. Check if already audited by endpoint (Internal Header check)
+            if response.headers.get("X-Audit-Captured") == "true":
+                audited_already = True
+                logger.debug(f"Request to {endpoint} already audited. Signal detected. Skipping middleware log.")
+                
+                # Remove internal header before returning
+                if hasattr(response, "headers"):
+                    if isinstance(response, StarletteStreamingResponse):
+                        response.headers.pop("X-Audit-Captured", None)
+                        return response
+                    
+                    new_headers = dict(response.headers)
+                    new_headers.pop("X-Audit-Captured", None)
+                    return Response(
+                        content=response.body if hasattr(response, "body") else b"",
+                        status_code=response.status_code,
+                        headers=new_headers,
+                        media_type=response.media_type
+                    )
+                return response
+
             if 200 <= response.status_code < 300:
                 status = AuditStatus.SUCCESS
             
-            # 5. Capture & Hash Output (EXCEPT for StreamingResponse)
-            from starlette.responses import StreamingResponse as StarletteStreamingResponse
+            # 6. Capture & Hash Output (EXCEPT for StreamingResponse)
             if isinstance(response, StarletteStreamingResponse):
                 # Streams are handled via endpoint-level auditing to avoid loading large files into memory.
                 logger.debug(f"StreamingResponse detected for {endpoint}, bypassing middleware body capture.")
@@ -122,19 +146,20 @@ class AuditMiddleware(BaseHTTPMiddleware):
             status = AuditStatus.FAILURE
             raise e
         finally:
-            # 6. Log Event
-            try:
-                entry = AuditLogEntry(
-                    endpoint=endpoint,
-                    method=method,
-                    action_type=action_type,
-                    tenant_id=tenant_id,
-                    input_hash=input_hash,
-                    output_hash=output_hash,
-                    status=status
-                )
-                audit_repo.save(entry)
-            except Exception as log_error:
-                logger.error(f"Audit Logging Failed: {log_error}")
+            # 7. Log Event (Only if not already audited by endpoint)
+            if not audited_already:
+                try:
+                    entry = AuditLogEntry(
+                        endpoint=endpoint,
+                        method=method,
+                        action_type=action_type,
+                        tenant_id=tenant_id,
+                        input_hash=input_hash,
+                        output_hash=output_hash,
+                        status=status
+                    )
+                    audit_repo.save(entry)
+                except Exception as log_error:
+                    logger.error(f"Audit Logging Failed: {log_error}")
 
         return response
