@@ -3,6 +3,8 @@ from app.schemas.invoice import Invoice
 
 # AUTHORITATIVE RECONCILIATION ENGINE – DO NOT DUPLICATE
 # This module is the single source of truth for all reconciliation logic.
+# PHASE-1 LOCKED: This engine is restricted to basic matching (Matched, Partial, Missing, Risky).
+# DO NOT add multi-month reconciliation or auto-filing logic here until Phase-2.
 
 def reconcile_invoice(inv: Invoice, index: int = 0) -> dict:
     """

@@ -3,6 +3,10 @@ from typing import List, Optional
 from datetime import datetime
 from app.schemas.vendor import VendorRiskLevel
 
+# PHASE-1 LOCKED: REPORT SCHEMA
+# Any changes to this schema must be reflected in BOTH JSON and PDF report formats.
+# DO NOT add new GST sections (e.g., GSTR-1 vs 3B comparisons) in Phase-1.
+
 class BusinessInfo(BaseModel):
     name: str = "-"
     gstin: str

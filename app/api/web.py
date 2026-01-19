@@ -13,6 +13,8 @@ PLAN_LIMITS = {
     "PRO": 500,
     "ENTERPRISE": 1000
 }
+# TODO: Phase-2: Multi-month historical plan usage tracking.
+# TODO: Phase-2: Persistent tenant settings and profile management.
 
 @router.get("/", response_class=HTMLResponse)
 async def landing_page(request: Request):
