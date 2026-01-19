@@ -124,7 +124,9 @@ async def get_gst_risk_pdf_report(x_tenant_id: str = Header(..., alias="X-Tenant
     elements.append(Spacer(1, 12))
     elements.append(Paragraph(f"<b>Tenant ID:</b> {report.business.tenant_id}", styles['Normal']))
     elements.append(Paragraph(f"<b>GSTIN:</b> {report.business.gstin}", styles['Normal']))
-    elements.append(Paragraph(f"<b>Generated:</b> {report.audit.generated_at.strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Generated (UTC):</b> {report.audit.generated_at.strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Engine Version:</b> {report.audit.reconciliation_version}", styles['Normal']))
+    elements.append(Paragraph(f"<b>Data Sources:</b> {', '.join(report.audit.data_sources)}", styles['Normal']))
     elements.append(Spacer(1, 24))
 
     # 2. Risk Assessment

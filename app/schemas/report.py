@@ -39,9 +39,10 @@ class RiskAssessment(BaseModel):
     recommendation: str = "-"
 
 class ReportAudit(BaseModel):
-    generated_at: datetime = Field(default_factory=datetime.now)
+    generated_at: datetime = Field(default_factory=datetime.utcnow)
     report_id: str
-    version: str = "v1.0"
+    reconciliation_version: str = "1.0.0"
+    data_sources: List[str] = ["User_Upload", "Government_Portal_Mock"]
 
 class ReportResponse(BaseModel):
     business: BusinessInfo
