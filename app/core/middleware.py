@@ -71,20 +71,21 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if not tenant_id and is_public:
             tenant_id = "PUBLIC"
 
-        # 3. Capture & Hash Input
+        # 3. Capture & Hash Input (Skip for methods without bodies to preserve stream integrity)
         input_hash = None
         request_body_bytes = b""
-        try:
-            request_body_bytes = await request.body()
-            # Always hash the body, even if empty, for determinism
-            input_hash = hashlib.sha256(request_body_bytes).hexdigest()
-        except Exception:
-            pass # Fail silently
-            
-        # Re-inject body
-        async def receive():
-            return {"type": "http.request", "body": request_body_bytes}
-        request._receive = receive
+        
+        if method in ["POST", "PUT", "PATCH"]:
+            try:
+                request_body_bytes = await request.body()
+                input_hash = hashlib.sha256(request_body_bytes).hexdigest()
+                
+                # Re-inject body (ASGI compliant)
+                async def receive():
+                    return {"type": "http.request", "body": request_body_bytes, "more_body": False}
+                request._receive = receive
+            except Exception:
+                pass 
 
         # 4. Process Request
         response = None
@@ -96,12 +97,17 @@ class AuditMiddleware(BaseHTTPMiddleware):
             if 200 <= response.status_code < 300:
                 status = AuditStatus.SUCCESS
             
-            # 5. Capture & Hash Output
+            # 5. Capture & Hash Output (EXCEPT for StreamingResponse)
+            from starlette.responses import StreamingResponse as StarletteStreamingResponse
+            if isinstance(response, StarletteStreamingResponse):
+                # Streams are handled via endpoint-level auditing to avoid loading large files into memory.
+                logger.debug(f"StreamingResponse detected for {endpoint}, bypassing middleware body capture.")
+                return response
+
             response_body_bytes = b""
             async for chunk in response.body_iterator:
                 response_body_bytes += chunk
             
-            # Always hash response
             output_hash = hashlib.sha256(response_body_bytes).hexdigest()
             
             # Reconstruct response
